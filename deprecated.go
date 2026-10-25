@@ -151,3 +151,14 @@ func NewRGBFromHEX(hex string) (RGB, error) {
 		B: uint8(c & 0x0000FF),
 	}, nil
 }
+
+// WithMargin sets the horizontal padding of the header.
+// Despite its name, this has always been an inner padding, not an outer margin.
+//
+// Deprecated: use WithPadding instead.
+func (p HeaderPrinter) WithMargin(margin int) *HeaderPrinter {
+	p.Margin = margin
+	p.Padding = margin
+
+	return &p
+}

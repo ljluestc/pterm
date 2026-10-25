@@ -4,7 +4,7 @@ package pterm_test
 //
 // Builder methods, Print*/Sprint* delegation and the global styling invariants
 // are covered generically in contract_test.go; the styled default output is
-// locked by snapshot tests. This file verifies the layout math: margins,
+// locked by snapshot tests. This file verifies the layout math: padding,
 // centering, full width, multiline padding and terminal-width clamping.
 //
 // TestMain forces the terminal size to 80x60.
@@ -31,8 +31,8 @@ func headerLines(t *testing.T, out string) []string {
 	return strings.Split(strings.TrimSuffix(plain, "\n"), "\n")
 }
 
-func TestHeaderPrinterCentersTextWithinMargin(t *testing.T) {
-	// Margin 5 on each side of "Hello" (5 cells) -> 15-wide header with a
+func TestHeaderPrinterCentersTextWithinPadding(t *testing.T) {
+	// Padding 5 on each side of "Hello" (5 cells) -> 15-wide header with a
 	// blank padded line above and below.
 	expected := "               \n" +
 		"     Hello     \n" +
@@ -41,15 +41,38 @@ func TestHeaderPrinterCentersTextWithinMargin(t *testing.T) {
 	assert.Equal(t, expected, stripANSI(pterm.DefaultHeader.Sprint("Hello")))
 }
 
-func TestHeaderPrinterWithMargin(t *testing.T) {
+func TestHeaderPrinterWithPadding(t *testing.T) {
 	expected := "         \n" +
 		"  Hello  \n" +
 		"         \n"
 
-	assert.Equal(t, expected, stripANSI(pterm.DefaultHeader.WithMargin(2).Sprint("Hello")))
+	assert.Equal(t, expected, stripANSI(pterm.DefaultHeader.WithPadding(2).Sprint("Hello")))
 }
 
-func TestHeaderPrinterZeroMarginShrinksToText(t *testing.T) {
+func TestHeaderPrinterWithPaddingZero(t *testing.T) {
+	expected := "     \n" +
+		"Hello\n" +
+		"     \n"
+
+	assert.Equal(t, expected, stripANSI(pterm.DefaultHeader.WithPadding(0).Sprint("Hello")))
+}
+
+func TestHeaderPrinterDeprecatedMarginStillPads(t *testing.T) {
+	expected := "         \n" +
+		"  Hello  \n" +
+		"         \n"
+
+	// WithMargin is kept as an alias so existing code renders the same.
+	assert.Equal(t, expected, stripANSI(pterm.DefaultHeader.WithMargin(2).Sprint("Hello")))
+
+	// So is setting the Margin field directly on a hand-built printer.
+	assert.Equal(t, expected, stripANSI(pterm.HeaderPrinter{Margin: 2}.Sprint("Hello")))
+
+	// Padding wins when both are set.
+	assert.Equal(t, expected, stripANSI(pterm.HeaderPrinter{Margin: 7, Padding: 2}.Sprint("Hello")))
+}
+
+func TestHeaderPrinterZeroPaddingShrinksToText(t *testing.T) {
 	p := pterm.HeaderPrinter{}
 
 	expected := "     \n" +

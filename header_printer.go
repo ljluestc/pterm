@@ -15,7 +15,7 @@ var (
 	DefaultHeader = HeaderPrinter{
 		TextStyle:       &ThemeDefault.HeaderTextStyle,
 		BackgroundStyle: &ThemeDefault.HeaderBackgroundStyle,
-		Margin:          5,
+		Padding:         5,
 	}
 )
 
@@ -25,9 +25,14 @@ var (
 type HeaderPrinter struct {
 	TextStyle       *Style
 	BackgroundStyle *Style
-	Margin          int
-	FullWidth       bool
-	Writer          io.Writer
+	// Padding is the horizontal space between the text and the edges of the header background.
+	Padding int
+	// Margin is the old name of Padding. It is only used when Padding is 0.
+	//
+	// Deprecated: use Padding instead.
+	Margin    int
+	FullWidth bool
+	Writer    io.Writer
 }
 
 // WithTextStyle returns a new HeaderPrinter with changed
@@ -42,10 +47,19 @@ func (p HeaderPrinter) WithBackgroundStyle(style *Style) *HeaderPrinter {
 	return &p
 }
 
-// WithMargin changes the background styling of the header.
-func (p HeaderPrinter) WithMargin(margin int) *HeaderPrinter {
-	p.Margin = margin
+// WithPadding sets the horizontal space between the text and the edges of the header background.
+func (p HeaderPrinter) WithPadding(padding int) *HeaderPrinter {
+	p.Padding = padding
 	return &p
+}
+
+// padding returns the effective padding, falling back to the deprecated Margin field.
+func (p HeaderPrinter) padding() int {
+	if p.Padding != 0 {
+		return p.Padding
+	}
+
+	return p.Margin
 }
 
 // WithFullWidth enables full width on a HeaderPrinter.
@@ -76,21 +90,22 @@ func (p HeaderPrinter) Sprint(a ...any) string {
 	}
 
 	text := Sprint(a...)
+	padding := p.padding()
 
 	var blankLine string
 
 	longestLine := internal.ReturnLongestLine(text, "\n")
-	longestLineLen := runewidth.StringWidth(RemoveColorFromString(longestLine)) + p.Margin*2
+	longestLineLen := runewidth.StringWidth(RemoveColorFromString(longestLine)) + padding*2
 
 	if p.FullWidth {
-		text = splitText(text, GetTerminalWidth()-p.Margin*2)
+		text = splitText(text, GetTerminalWidth()-padding*2)
 		blankLine = strings.Repeat(" ", GetTerminalWidth())
 	} else {
 		if longestLineLen > GetTerminalWidth() {
-			text = splitText(text, GetTerminalWidth()-p.Margin*2)
+			text = splitText(text, GetTerminalWidth()-padding*2)
 			blankLine = strings.Repeat(" ", GetTerminalWidth())
 		} else {
-			text = splitText(text, longestLineLen-p.Margin*2)
+			text = splitText(text, longestLineLen-padding*2)
 			blankLine = strings.Repeat(" ", longestLineLen)
 		}
 	}
@@ -102,7 +117,7 @@ func (p HeaderPrinter) Sprint(a ...any) string {
 		longestLineLen = runewidth.StringWidth(RemoveColorFromString(internal.ReturnLongestLine(text, "\n")))
 		marginString = strings.Repeat(" ", (GetTerminalWidth()-longestLineLen)/2)
 	} else {
-		marginString = strings.Repeat(" ", p.Margin)
+		marginString = strings.Repeat(" ", padding)
 	}
 
 	ret.WriteString(p.BackgroundStyle.Sprint(blankLine))
